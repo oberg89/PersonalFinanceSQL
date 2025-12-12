@@ -6,6 +6,9 @@ import repository.storage.DataStore;
 import repository.storage.LineConverter;
 
 import java.io.File;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
@@ -14,8 +17,12 @@ import java.util.stream.Collectors;
 
 /**
  * Min fil-baserade implementation av TransactionRepository.
- * Använder CsvDataStore för att läsa/skriva transaktioner till en CSV-fil.
- * Håller transaktionerna i minnet (en lista) och synkar mot fil vid behov.
+ *
+ * Jag vill att appen ska använda en stabil plats på disk (inte src/main/resources)
+ * så att användardata överlever bygg/clean och fungerar både i IDE och med Maven.
+ *
+ * Standardplats: %USERPROFILE%/.personalfinance/transactions.csv (Windows)
+ * Kan skickas in som filePath i konstruktorn (för test eller custom).
  */
 public class FileTransactionRepository implements TransactionRepository {
 
@@ -25,12 +32,32 @@ public class FileTransactionRepository implements TransactionRepository {
     // DataStore som hanterar själva fil-läsningen/skrivningen
     private final DataStore<Transaction> dataStore;
 
+    // Standardfil: i användarens hemkatalog under .personalfinance
+    private static final Path DEFAULT_FOLDER = Paths.get(System.getProperty("user.home"), ".personalfinance");
+    private static final Path DEFAULT_FILE = DEFAULT_FOLDER.resolve("transactions.csv");
+
     /**
      * Skapar ett repository som använder en specifik fil.
-     * @param filePath sökväg till CSV-filen (t.ex. "src/resources/transactions.csv")
+     * Om filePath är null eller tom används standardplatsen i användarens hemkatalog.
+     *
+     * @param filePath sökväg till CSV-filen (kan vara null för default)
      */
     public FileTransactionRepository(String filePath) {
-        File file = new File(filePath);
+        Path path;
+        if (filePath == null || filePath.isBlank()) {
+            path = DEFAULT_FILE;
+        } else {
+            path = Paths.get(filePath);
+        }
+
+        // Se till att katalogen finns
+        try {
+            Files.createDirectories(path.getParent());
+        } catch (Exception e) {
+            throw new IllegalStateException("Kunde inte skapa katalog för datafil: " + path.getParent(), e);
+        }
+
+        File file = path.toFile();
 
         // Skapar en CsvDataStore med en converter som kan läsa/skriva Transaction
         this.dataStore = new CsvDataStore<>(file, new TransactionLineConverter());
@@ -39,8 +66,17 @@ public class FileTransactionRepository implements TransactionRepository {
         this.transactions = new ArrayList<>(dataStore.readAll());
 
         if (!transactions.isEmpty()) {
-            System.out.println("Laddade " + transactions.size() + " transaktioner från fil.");
+            System.out.println("Laddade " + transactions.size() + " transaktioner från fil: " + file.getAbsolutePath());
+        } else {
+            System.out.println("Inga transaktioner funna. Fil: " + file.getAbsolutePath());
         }
+    }
+
+    /**
+     * Enkel konstruktor som använder standardfil.
+     */
+    public FileTransactionRepository() {
+        this(null);
     }
 
     /**
@@ -104,15 +140,8 @@ public class FileTransactionRepository implements TransactionRepository {
 
     // === Inre klass: Konverterar mellan Transaction och CSV-rad ===
 
-    /**
-     * Hjälper CsvDataStore att omvandla mellan Transaction-objekt och text-rader.
-     * Format: "yyyy-MM-dd;belopp;beskrivning"
-     */
     private static class TransactionLineConverter implements LineConverter<Transaction> {
 
-        /**
-         * Ska en rad text (t.ex. "2024-03-01;1000;Lön") till ett Transaction-objekt.
-         */
         @Override
         public Transaction fromLine(String line) throws Exception {
             String[] parts = line.split(";", 3);
@@ -127,12 +156,9 @@ public class FileTransactionRepository implements TransactionRepository {
             return new Transaction(date, amount, description);
         }
 
-        /**
-         * Gör om ett Transaction-objekt till en CSV-rad.
-         */
         @Override
         public String toLine(Transaction item) {
-            return item.toFileFormat(); // använder Transaction's egen metod
+            return item.toFileFormat();
         }
     }
 }

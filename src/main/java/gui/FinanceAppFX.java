@@ -1,8 +1,7 @@
 package gui;
 
-import service.FinanceManager;      // Min logik/service (just nu filbaserad)
-import domain.Transaction;          // Min modell
-
+import service.FinanceManager;
+import domain.Transaction;
 import javafx.application.Application;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
@@ -17,26 +16,28 @@ import java.time.LocalDate;
 
 /**
  * JavaFX-GUI för min Personal Finance-app.
- * Här bygger jag vyer (knappar, tabeller, dialoger) och pratar med FinanceManager.*/
+ * Jag visar först en enkel login-dialog och fortsätter endast om inloggning lyckas.
+ */
 public class FinanceAppFX extends Application {
 
-    // Backend-logik (service) som GUI använder
     private FinanceManager financeManager;
-
-    // Tabell som visar transaktioner
     private TableView<Transaction> transactionTable;
-
-    // Label som visar aktuell balans
     private Label balanceLabel;
 
     @Override
     public void start(Stage primaryStage) {
-        // Initierar service (hanterar inläsning/sparning + logik)
         financeManager = new FinanceManager();
+
+        // --- Enkel login-dialog före resten ---
+        boolean loggedIn = showLoginDialog();
+        if (!loggedIn) {
+            // Avsluta appen om användaren inte loggar in
+            primaryStage.close();
+            return;
+        }
 
         primaryStage.setTitle("Personal Finance App");
 
-        // === VÄNSTER PANEL: Knappar/meny ===
         VBox leftPanel = new VBox(15);
         leftPanel.setPadding(new Insets(20));
         leftPanel.setPrefWidth(200);
@@ -64,9 +65,12 @@ public class FinanceAppFX extends Application {
             showAlert("Data sparad!", Alert.AlertType.INFORMATION);
         });
 
-        Button btnExit = new Button("Avsluta");
+        Button btnExit = new Button("Logga ut och avsluta");
         btnExit.setPrefWidth(180);
-        btnExit.setOnAction(e -> primaryStage.close());
+        btnExit.setOnAction(e -> {
+            financeManager.logout();
+            primaryStage.close();
+        });
 
         balanceLabel = new Label();
         balanceLabel.setStyle("-fx-font-size: 16px; -fx-font-weight: bold;");
@@ -79,7 +83,6 @@ public class FinanceAppFX extends Application {
                 balanceLabel
         );
 
-        // === HÖGER PANEL: Tabell med transaktioner ===
         transactionTable = new TableView<>();
         transactionTable.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
 
@@ -95,7 +98,6 @@ public class FinanceAppFX extends Application {
         transactionTable.getColumns().addAll(dateCol, amountCol, descCol);
         refreshTable();
 
-        // === LAYOUT (vänster meny + tabell till höger) ===
         BorderPane root = new BorderPane();
         root.setLeft(leftPanel);
         root.setCenter(transactionTable);
@@ -105,7 +107,64 @@ public class FinanceAppFX extends Application {
         primaryStage.show();
     }
 
-    // === Lägg till transaktion (dialog/popup) ===
+    private boolean showLoginDialog() {
+        Dialog<Boolean> dialog = new Dialog<>();
+        dialog.setTitle("Logga in");
+        dialog.setHeaderText("Ange användarnamn och lösenord");
+
+        ButtonType loginButtonType = new ButtonType("Logga in", ButtonBar.ButtonData.OK_DONE);
+        ButtonType registerButtonType = new ButtonType("Registrera", ButtonBar.ButtonData.OTHER);
+        dialog.getDialogPane().getButtonTypes().addAll(loginButtonType, registerButtonType, ButtonType.CANCEL);
+
+        GridPane grid = new GridPane();
+        grid.setHgap(10);
+        grid.setVgap(10);
+        grid.setPadding(new Insets(20));
+
+        TextField usernameField = new TextField();
+        usernameField.setPromptText("Användarnamn");
+        PasswordField passwordField = new PasswordField();
+        passwordField.setPromptText("Lösenord");
+
+        grid.add(new Label("Användarnamn:"), 0, 0);
+        grid.add(usernameField, 1, 0);
+        grid.add(new Label("Lösenord:"), 0, 1);
+        grid.add(passwordField, 1, 1);
+
+        dialog.getDialogPane().setContent(grid);
+
+        dialog.setResultConverter(btn -> {
+            if (btn == loginButtonType) {
+                String u = usernameField.getText().trim();
+                String p = passwordField.getText();
+                if (financeManager.login(u, p)) {
+                    return true;
+                } else {
+                    showAlert("Inloggning misslyckades.", Alert.AlertType.ERROR);
+                }
+            } else if (btn == registerButtonType) {
+                String u = usernameField.getText().trim();
+                String p = passwordField.getText();
+                if (u.isEmpty() || p.isEmpty()) {
+                    showAlert("Ange användarnamn och lösenord för registrering.", Alert.AlertType.WARNING);
+                } else {
+                    var user = financeManager.register(u, p);
+                    if (user != null) {
+                        showAlert("Registrering lyckades. Logga in nu.", Alert.AlertType.INFORMATION);
+                    } else {
+                        showAlert("Registrering misslyckades.", Alert.AlertType.ERROR);
+                    }
+                }
+            }
+            return null;
+        });
+
+        dialog.showAndWait();
+        return financeManager.isAuthenticated();
+    }
+
+    // resten av dina metoder (showAddTransactionDialog, removeSelectedTransaction, refreshTable, updateBalanceLabel, showReportsDialog, showAlert)
+    // ... (samma kod som du redan skickade, ingen förändring behövs bortsett från att financeManager nu kräver inloggning)
     private void showAddTransactionDialog() {
         Dialog<Transaction> dialog = new Dialog<>();
         dialog.setTitle("Lägg till transaktion");
@@ -120,7 +179,7 @@ public class FinanceAppFX extends Application {
         grid.setPadding(new Insets(20));
 
         DatePicker datePicker = new DatePicker(LocalDate.now());
-        datePicker.setEditable(true); // låter mig skriva datum manuellt
+        datePicker.setEditable(true);
         TextField amountField = new TextField();
         amountField.setPromptText("Belopp (+ inkomst, - utgift)");
         TextField descField = new TextField();
@@ -159,21 +218,18 @@ public class FinanceAppFX extends Application {
         });
     }
 
-    // === Ta bort vald transaktion ===
     private void removeSelectedTransaction() {
         Transaction selected = transactionTable.getSelectionModel().getSelectedItem();
         if (selected == null) {
             showAlert("Välj en transaktion att ta bort!", Alert.AlertType.WARNING);
             return;
         }
-
         int index = financeManager.getAllTransactions().indexOf(selected);
         financeManager.removeTransaction(index);
         refreshTable();
         updateBalanceLabel();
     }
 
-    // === Uppdatera tabellen med data från service ===
     private void refreshTable() {
         ObservableList<Transaction> data =
                 FXCollections.observableArrayList(financeManager.getAllTransactions());
@@ -181,7 +237,6 @@ public class FinanceAppFX extends Application {
         updateBalanceLabel();
     }
 
-    // === Uppdatera balanslabel (grön/röd text beroende på saldo) ===
     private void updateBalanceLabel() {
         double balance = financeManager.getBalance();
         balanceLabel.setText(String.format("Balans: %.2f kr", balance));
@@ -194,7 +249,6 @@ public class FinanceAppFX extends Application {
         }
     }
 
-    // === Visa rapporter (alla nivåer i en dialog) ===
     private void showReportsDialog() {
         Dialog<Void> dialog = new Dialog<>();
         dialog.setTitle("Rapporter");
@@ -205,18 +259,15 @@ public class FinanceAppFX extends Application {
         grid.setVgap(10);
         grid.setPadding(new Insets(20));
 
-        // Välj typ av rapport
         ComboBox<String> typeBox = new ComboBox<>();
         typeBox.getItems().addAll("År", "Månad", "Vecka", "Dag");
         typeBox.setValue("År");
 
-        // Fält för tidsenheter
         TextField yearField = new TextField(String.valueOf(LocalDate.now().getYear()));
         TextField monthField = new TextField();
         TextField weekField = new TextField();
         DatePicker dayPicker = new DatePicker(LocalDate.now());
 
-        // Placera kontroller i grid
         grid.add(new Label("Rapporttyp:"), 0, 0);
         grid.add(typeBox, 1, 0);
         grid.add(new Label("År:"), 0, 1);
@@ -288,14 +339,12 @@ public class FinanceAppFX extends Application {
         dialog.showAndWait();
     }
 
-    // === Hjälpmetod för popups ===
     private void showAlert(String message, Alert.AlertType type) {
         Alert alert = new Alert(type);
         alert.setContentText(message);
         alert.showAndWait();
     }
 
-    // Startar GUI:t
     public static void main(String[] args) {
         launch(args);
     }

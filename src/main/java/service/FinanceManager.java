@@ -1,166 +1,232 @@
 package service;
 
 import domain.Transaction;
-import repository.TransactionRepository;
-import repository.FileTransactionRepository;
+import domain.User;
+import repository.JdbcTransactionRepository;
+import repository.JdbcUserRepository;
 
 import java.time.LocalDate;
 import java.time.temporal.ChronoField;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 /**
- * Hanterar alla transaktioner och beräkningar för personal finance-applikationen.
- * Här ligger min logik (lägga till/ta bort, balans, rapporter).
+ * FinanceManager - hanterar applikationens affärslogik.
+ *
+ * - Pratar med JdbcUserRepository för register/login.
+ * - Pratar med JdbcTransactionRepository för transaktioner (per-användare).
+ * - Håller currentUserId och currentUsername internt efter inloggning.
+ *
+ * Filväg: src/main/java/service/FinanceManager.java
  */
 public class FinanceManager {
 
-    // Min lagringsabstraktion (repository pattern – VG-krav)
-    private final TransactionRepository repository;
+    private final JdbcTransactionRepository txRepository;
+    private final JdbcUserRepository userRepository;
 
-    /**
-     * Konstruktor: skapar en FinanceManager med fil-baserad lagring.
-     * Repository laddar automatiskt data från fil vid start.
-     */
+    private Integer currentUserId = null;
+    private String currentUsername = null;
+
     public FinanceManager() {
-        // Använder FileTransactionRepository (samma filväg som innan)
-        this.repository = new FileTransactionRepository("src/resources/transactions.csv");
+        this.txRepository = new JdbcTransactionRepository();
+        this.userRepository = new JdbcUserRepository();
+    }
+
+    // ===== Auth / account =====
+
+    /**
+     * Registrera och returnera Optional<User> vid framgång.
+     */
+    public Optional<User> register(String username, String password) {
+        var opt = userRepository.registerUser(username, password);
+        return opt;
     }
 
     /**
-     * Alternativ konstruktor: låter mig injicera ett annat repository
-     * (t.ex. för testning eller annan lagringsmetod).
+     * Registrera och logga in (boolean).
      */
-    public FinanceManager(TransactionRepository repository) {
-        this.repository = repository;
-    }
-
-    // Lägger till en ny transaktion (repository sparar automatiskt)
-    public void addTransaction(Transaction transaction) {
-        repository.save(transaction);
-        System.out.println("Transaktion tillagd!");
-    }
-
-    // Tar bort en transaktion baserat på index (repository sparar automatiskt)
-    public void removeTransaction(int index) {
-        if (repository.deleteByIndex(index)) {
-            System.out.println("Transaktion borttagen!");
-        } else {
-            System.out.println("Ogiltigt index.");
+    public boolean registerUser(String username, String password) {
+        var opt = register(username, password);
+        if (opt.isPresent()) {
+            loginAs(opt.get());
+            return true;
         }
+        return false;
     }
 
-    // Beräknar och returnerar nuvarande kontobalans (summa av alla belopp)
-    public double getBalance() {
-        return repository.findAll().stream()
-                .mapToDouble(Transaction::getAmount)
-                .sum();
+    /**
+     * Autentisera och returnera Optional<User>.
+     */
+    public Optional<User> authenticate(String username, String password) {
+        return userRepository.authenticate(username, password);
     }
 
-    // Skriver ut alla transaktioner i terminalen (hjälp vid felsökning)
+    /**
+     * Logga in och returnera boolean.
+     * Denna metod finns för att GUI-koden som anropar financeManager.login(...) ska kompilera.
+     */
+    public boolean login(String username, String password) {
+        return loginUser(username, password);
+    }
+
+    /**
+     * Logga in (boolean-variant).
+     */
+    public boolean loginUser(String username, String password) {
+        var opt = authenticate(username, password);
+        if (opt.isPresent()) {
+            loginAs(opt.get());
+            return true;
+        }
+        return false;
+    }
+
+    private void loginAs(User user) {
+        if (user == null) return;
+        this.currentUserId = user.getId();
+        this.currentUsername = user.getUsername();
+    }
+
+    public void logout() {
+        this.currentUserId = null;
+        this.currentUsername = null;
+    }
+
+    public boolean isAuthenticated() {
+        return this.currentUserId != null;
+    }
+
+    public Integer getCurrentUserId() {
+        return this.currentUserId;
+    }
+
+    public String getCurrentUsername() {
+        return this.currentUsername;
+    }
+
+    // ===== Transaktioner (per-användare) =====
+
+    public List<Transaction> getAllTransactions() {
+        if (!isAuthenticated()) return new ArrayList<>();
+        return txRepository.findAllForUser(this.currentUserId);
+    }
+
+    public void addTransaction(Transaction tx) {
+        if (!isAuthenticated()) throw new IllegalStateException("Ingen användare inloggad");
+        txRepository.saveForUser(tx, this.currentUserId);
+    }
+
+    public boolean removeTransaction(int index) {
+        if (!isAuthenticated()) return false;
+        return txRepository.deleteByIndexForUser(index);
+    }
+
+    public int getTransactionCount() {
+        if (!isAuthenticated()) return 0;
+        return txRepository.countForUser(this.currentUserId);
+    }
+
     public void printAllTransactions() {
-        List<Transaction> all = repository.findAll();
-        if (all.isEmpty()) {
-            System.out.println("Inga transaktioner finns.");
+        if (!isAuthenticated()) {
+            System.out.println("Ingen användare inloggad.");
             return;
         }
-
-        System.out.println("\n=== Alla Transaktioner ===");
+        var all = getAllTransactions();
+        if (all.isEmpty()) {
+            System.out.println("Inga transaktioner för användare: " + currentUsername);
+            return;
+        }
+        System.out.println("\n=== Alla transaktioner för " + currentUsername + " ===");
         for (int i = 0; i < all.size(); i++) {
-            System.out.println(i + ": " + all.get(i));
+            System.out.println(i + " : " + all.get(i));
         }
     }
 
-    // === Rapporter (år, månad, vecka, dag) ===
-
-    // Total inkomst för ett specifikt år
-    public double getYearlyIncome(int year) {
-        return repository.findAll().stream()
-                .filter(t -> t.getDate().getYear() == year && t.isIncome())
-                .mapToDouble(Transaction::getAmount)
-                .sum();
-    }
-
-    // Totala utgifter för ett specifikt år
-    public double getYearlyExpenses(int year) {
-        return Math.abs(repository.findAll().stream()
-                .filter(t -> t.getDate().getYear() == year && t.isExpense())
-                .mapToDouble(Transaction::getAmount)
-                .sum());
-    }
-
-    // Total inkomst för specifik månad
-    public double getMonthlyIncome(int year, int month) {
-        return repository.findAll().stream()
-                .filter(t -> t.getDate().getYear() == year
-                        && t.getDate().getMonthValue() == month
-                        && t.isIncome())
-                .mapToDouble(Transaction::getAmount)
-                .sum();
-    }
-
-    // Totala utgifter för specifik månad
-    public double getMonthlyExpenses(int year, int month) {
-        return Math.abs(repository.findAll().stream()
-                .filter(t -> t.getDate().getYear() == year
-                        && t.getDate().getMonthValue() == month
-                        && t.isExpense())
-                .mapToDouble(Transaction::getAmount)
-                .sum());
-    }
-
-    // Total inkomst för specifik vecka (ALIGNED_WEEK_OF_YEAR)
-    public double getWeeklyIncome(int year, int week) {
-        return repository.findAll().stream()
-                .filter(t -> t.getDate().getYear() == year
-                        && t.getDate().get(ChronoField.ALIGNED_WEEK_OF_YEAR) == week
-                        && t.isIncome())
-                .mapToDouble(Transaction::getAmount)
-                .sum();
-    }
-
-    // Totala utgifter för specifik vecka
-    public double getWeeklyExpenses(int year, int week) {
-        return Math.abs(repository.findAll().stream()
-                .filter(t -> t.getDate().getYear() == year
-                        && t.getDate().get(ChronoField.ALIGNED_WEEK_OF_YEAR) == week
-                        && t.isExpense())
-                .mapToDouble(Transaction::getAmount)
-                .sum());
-    }
-
-    // Total inkomst för en specifik dag
-    public double getDailyIncome(LocalDate date) {
-        return repository.findAll().stream()
-                .filter(t -> t.getDate().equals(date) && t.isIncome())
-                .mapToDouble(Transaction::getAmount)
-                .sum();
-    }
-
-    // Totala utgifter för en specifik dag
-    public double getDailyExpenses(LocalDate date) {
-        return Math.abs(repository.findAll().stream()
-                .filter(t -> t.getDate().equals(date) && t.isExpense())
-                .mapToDouble(Transaction::getAmount)
-                .sum());
-    }
-
-    // === Publika metoder för GUI/terminal-app ===
-
-    // Sparar alla transaktioner till fil (nu via repository)
+    /**
+     * Synka aktuell lista till DB (ersätter allt för användaren).
+     */
     public void saveToFile() {
-        // Repository sparar automatiskt vid varje add/remove,
-        // men jag behåller denna metod för GUI-knappen "Spara data"
-        repository.saveAll(repository.findAll());
-        System.out.println("Data sparad!");
+        if (!isAuthenticated()) {
+            System.out.println("Ingen användare inloggad: inget att spara.");
+            return;
+        }
+        var all = getAllTransactions();
+        txRepository.saveAllForUser(all, this.currentUserId);
     }
 
-    // Returnerar antalet transaktioner
-    public int getTransactionCount() {
-        return repository.count();
+    // ===== Rapporter / beräkningar =====
+
+    public double getBalance() {
+        var all = getAllTransactions();
+        return all.stream().mapToDouble(Transaction::getAmount).sum();
     }
 
-    // Hämtar alla transaktioner (för att visa i JavaFX-tabellen)
-    public List<Transaction> getAllTransactions() {
-        return repository.findAll();
+    public double getYearlyIncome(int year) {
+        var all = getAllTransactions();
+        return all.stream()
+                .filter(t -> t.getDate() != null && t.getDate().getYear() == year)
+                .mapToDouble(t -> t.getAmount() > 0 ? t.getAmount() : 0.0)
+                .sum();
+    }
+
+    public double getYearlyExpenses(int year) {
+        var all = getAllTransactions();
+        return all.stream()
+                .filter(t -> t.getDate() != null && t.getDate().getYear() == year)
+                .mapToDouble(t -> t.getAmount() < 0 ? Math.abs(t.getAmount()) : 0.0)
+                .sum();
+    }
+
+    public double getMonthlyIncome(int year, int month) {
+        var all = getAllTransactions();
+        return all.stream()
+                .filter(t -> t.getDate() != null && t.getDate().getYear() == year && t.getDate().getMonthValue() == month)
+                .mapToDouble(t -> t.getAmount() > 0 ? t.getAmount() : 0.0)
+                .sum();
+    }
+
+    public double getMonthlyExpenses(int year, int month) {
+        var all = getAllTransactions();
+        return all.stream()
+                .filter(t -> t.getDate() != null && t.getDate().getYear() == year && t.getDate().getMonthValue() == month)
+                .mapToDouble(t -> t.getAmount() < 0 ? Math.abs(t.getAmount()) : 0.0)
+                .sum();
+    }
+
+    public double getWeeklyIncome(int year, int week) {
+        var all = getAllTransactions();
+        return all.stream()
+                .filter(t -> t.getDate() != null && t.getDate().getYear() == year && weekOfYear(t.getDate()) == week)
+                .mapToDouble(t -> t.getAmount() > 0 ? t.getAmount() : 0.0)
+                .sum();
+    }
+
+    public double getWeeklyExpenses(int year, int week) {
+        var all = getAllTransactions();
+        return all.stream()
+                .filter(t -> t.getDate() != null && t.getDate().getYear() == year && weekOfYear(t.getDate()) == week)
+                .mapToDouble(t -> t.getAmount() < 0 ? Math.abs(t.getAmount()) : 0.0)
+                .sum();
+    }
+
+    public double getDailyIncome(LocalDate date) {
+        var all = getAllTransactions();
+        return all.stream()
+                .filter(t -> t.getDate() != null && t.getDate().isEqual(date))
+                .mapToDouble(t -> t.getAmount() > 0 ? t.getAmount() : 0.0)
+                .sum();
+    }
+
+    public double getDailyExpenses(LocalDate date) {
+        var all = getAllTransactions();
+        return all.stream()
+                .filter(t -> t.getDate() != null && t.getDate().isEqual(date))
+                .mapToDouble(t -> t.getAmount() < 0 ? Math.abs(t.getAmount()) : 0.0)
+                .sum();
+    }
+
+    private int weekOfYear(LocalDate date) {
+        return date.get(ChronoField.ALIGNED_WEEK_OF_YEAR);
     }
 }

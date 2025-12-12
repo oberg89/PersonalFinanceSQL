@@ -1,0 +1,9 @@
+﻿D:\code\PersonalFinance\src\app\PersonalFinanceApp.java
+D:\code\PersonalFinance\src\domain\Transaction.java
+D:\code\PersonalFinance\src\gui\FinanceAppFX.java
+D:\code\PersonalFinance\src\repository\FileTransactionRepository.java
+D:\code\PersonalFinance\src\repository\TransactionRepository.java
+D:\code\PersonalFinance\src\repository\storage\CsvDataStore.java
+D:\code\PersonalFinance\src\repository\storage\DataStore.java
+D:\code\PersonalFinance\src\repository\storage\LineConverter.java
+D:\code\PersonalFinance\src\service\FinanceManager.java
