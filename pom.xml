@@ -1,0 +1,96 @@
+﻿<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0
+         https://maven.apache.org/xsd/maven-4.0.0.xsd">
+
+    <!-- Här definierar jag Maven-modellen som projektet bygger på -->
+    <modelVersion>4.0.0</modelVersion>
+
+    <!-- Mitt projekt-id för Maven -->
+    <groupId>personalfinance</groupId>
+    <artifactId>personalfinance</artifactId>
+    <version>1.0-SNAPSHOT</version>
+
+    <properties>
+        <!-- Jag kör Java 21 och vill att Maven kompilerar i samma version -->
+        <maven.compiler.source>21</maven.compiler.source>
+        <maven.compiler.target>21</maven.compiler.target>
+
+        <!-- Versionen av JavaFX jag använder i projektet -->
+        <javafx.version>21.0.2</javafx.version>
+
+        <!-- Ser till att allt byggs i UTF-8 så jag slipper strul -->
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    </properties>
+
+    <dependencies>
+
+        <!-- JavaFX Controls (knappar, tabeller, UI-komponenter) -->
+        <dependency>
+            <groupId>org.openjfx</groupId>
+            <artifactId>javafx-controls</artifactId>
+            <version>${javafx.version}</version>
+        </dependency>
+
+        <!-- JavaFX FXML (om jag vill ladda GUI från .fxml-filer) -->
+        <dependency>
+            <groupId>org.openjfx</groupId>
+            <artifactId>javafx-fxml</artifactId>
+            <version>${javafx.version}</version>
+        </dependency>
+
+        <!-- JDBC-driver för PostgreSQL så jag kan koppla appen mot databasen -->
+        <dependency>
+            <groupId>org.postgresql</groupId>
+            <artifactId>postgresql</artifactId>
+            <version>42.6.0</version>
+        </dependency>
+
+        <!-- BCrypt använder jag för att hasha lösenord i kontosystemet -->
+        <dependency>
+            <groupId>org.mindrot</groupId>
+            <artifactId>jbcrypt</artifactId>
+            <version>0.4</version>
+        </dependency>
+
+    </dependencies>
+
+    <build>
+        <plugins>
+
+            <!-- Plugin för att kunna köra JavaFX-appen direkt med "mvn javafx:run" -->
+            <plugin>
+                <groupId>org.openjfx</groupId>
+                <artifactId>javafx-maven-plugin</artifactId>
+                <version>0.0.8</version>
+
+                <!-- Här säger jag vilken klass som innehåller min "main" för JavaFX -->
+                <configuration>
+                    <mainClass>gui.FinanceAppFX</mainClass>
+                </configuration>
+            </plugin>
+
+            <!-- Maven Compiler Plugin: ser till att projektet bygger i rätt Java-version -->
+            <plugin>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>3.11.0</version>
+
+                <configuration>
+                    <!-- Jag vill kompilera i Java 21 (hämtar från properties ovan) -->
+                    <source>${maven.compiler.source}</source>
+                    <target>${maven.compiler.target}</target>
+                    <encoding>${project.build.sourceEncoding}</encoding>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>exec-maven-plugin</artifactId>
+                <version>3.1.0</version>
+                <configuration>
+                    <mainClass>test.UserTestApp</mainClass>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+
+</project>

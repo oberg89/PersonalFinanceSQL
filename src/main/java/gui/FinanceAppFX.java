@@ -137,11 +137,15 @@ public class FinanceAppFX extends Application {
             if (btn == loginButtonType) {
                 String u = usernameField.getText().trim();
                 String p = passwordField.getText();
+<<<<<<< HEAD
 
+=======
+>>>>>>> 543d416a5279d169c130be997d1c539ca5b52008
                 if (financeManager.login(u, p)) {
                     return true;
                 } else {
                     showAlert("Inloggning misslyckades.", Alert.AlertType.ERROR);
+<<<<<<< HEAD
                     return null;
                 }
 
@@ -176,6 +180,28 @@ public class FinanceAppFX extends Application {
         return financeManager.isAuthenticated() || dialog.getResult() == null;
 
 
+=======
+                }
+            } else if (btn == registerButtonType) {
+                String u = usernameField.getText().trim();
+                String p = passwordField.getText();
+                if (u.isEmpty() || p.isEmpty()) {
+                    showAlert("Ange användarnamn och lösenord för registrering.", Alert.AlertType.WARNING);
+                } else {
+                    var user = financeManager.register(u, p);
+                    if (user != null) {
+                        showAlert("Registrering lyckades. Logga in nu.", Alert.AlertType.INFORMATION);
+                    } else {
+                        showAlert("Registrering misslyckades.", Alert.AlertType.ERROR);
+                    }
+                }
+            }
+            return null;
+        });
+
+        dialog.showAndWait();
+        return financeManager.isAuthenticated();
+>>>>>>> 543d416a5279d169c130be997d1c539ca5b52008
     }
 
     // resten av dina metoder (showAddTransactionDialog, removeSelectedTransaction, refreshTable, updateBalanceLabel, showReportsDialog, showAlert)

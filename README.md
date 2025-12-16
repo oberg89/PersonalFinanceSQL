@@ -118,7 +118,7 @@ Databasschemat finns definierat i `schema.sql` och innehåller tabeller för:
 
 ## 🖥️ Så kör jag projektet
 
-### 🔹 Gradle 
+### 🔹 Gradle (rekommenderat)
 
 Projektet innehåller **Gradle Wrapper**:
 
@@ -128,6 +128,15 @@ Projektet innehåller **Gradle Wrapper**:
 
 Gradle hanterar JavaFX, beroenden och JVM-inställningar automatiskt.
 
+---
+
+### 🔹 Maven
+
+Projektet kan även köras med Maven:
+
+```bash
+mvn clean javafx:run
+```
 
 ---
 
