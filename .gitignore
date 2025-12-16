@@ -1,0 +1,15 @@
+# Maven (borttaget men ok att ignorera)
+target/
+
+# Gradle
+.gradle/
+build/
+
+# IntelliJ
+.idea/
+*.iml
+out/
+
+# Övrigt
+lib/
+.DS_Store
