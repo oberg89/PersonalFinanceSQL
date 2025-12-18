@@ -12,31 +12,38 @@ import java.util.List;
 import java.util.Optional;
 
 /**
- * FinanceManager - hanterar applikationens affärslogik.
- *
- * - Pratar med JdbcUserRepository för register/login.
- * - Pratar med JdbcTransactionRepository för transaktioner (per-användare).
- * - Håller currentUserId och currentUsername internt efter inloggning.
- *
- * Filväg: src/main/java/service/FinanceManager.java
+ * Service-klass som innehåller applikationens affärslogik.
+ * Ansvar:
+ * - Hanterar inloggning, registrering och utloggning
+ * - Håller reda på aktuell inloggad användare
+ * - Anropar repository-klasser för databasåtkomst
+ * - Utför beräkningar som balans och rapporter
  */
 public class FinanceManager {
 
+    // Repository för transaktioner (kopplade till användare)
     private final JdbcTransactionRepository txRepository;
+
+    // Repository för användare (login/registrering)
     private final JdbcUserRepository userRepository;
 
+    // Inloggad användares id (null om ingen är inloggad)
     private Integer currentUserId = null;
+
+    // Inloggad användares användarnamn
     private String currentUsername = null;
 
+    // Skapar repositories vid start av applikationen
     public FinanceManager() {
         this.txRepository = new JdbcTransactionRepository();
         this.userRepository = new JdbcUserRepository();
     }
 
-    // ===== Auth / account =====
+    // ===== Autentisering / konto =====
 
     /**
-     * Registrera och returnera Optional<User> vid framgång.
+     * Registrerar en ny användare.
+     * Returnerar Optional<User> om det lyckas.
      */
     public Optional<User> register(String username, String password) {
         var opt = userRepository.registerUser(username, password);
@@ -44,7 +51,7 @@ public class FinanceManager {
     }
 
     /**
-     * Registrera och logga in (boolean).
+     * Registrerar användare och loggar in direkt vid lyckad registrering.
      */
     public boolean registerUser(String username, String password) {
         var opt = register(username, password);
@@ -56,22 +63,21 @@ public class FinanceManager {
     }
 
     /**
-     * Autentisera och returnera Optional<User>.
+     * Autentiserar användare och returnerar Optional<User>.
      */
     public Optional<User> authenticate(String username, String password) {
         return userRepository.authenticate(username, password);
     }
 
     /**
-     * Logga in och returnera boolean.
-     * Denna metod finns för att GUI-koden som anropar financeManager.login(...) ska kompilera.
+     * Loggar in användare (boolean-variant för GUI:t).
      */
     public boolean login(String username, String password) {
         return loginUser(username, password);
     }
 
     /**
-     * Logga in (boolean-variant).
+     * Loggar in användare om användarnamn och lösenord är korrekta.
      */
     public boolean loginUser(String username, String password) {
         var opt = authenticate(username, password);
@@ -82,17 +88,20 @@ public class FinanceManager {
         return false;
     }
 
+    // Sätter aktuell användare efter lyckad inloggning
     private void loginAs(User user) {
         if (user == null) return;
         this.currentUserId = user.getId();
         this.currentUsername = user.getUsername();
     }
 
+    // Loggar ut aktuell användare
     public void logout() {
         this.currentUserId = null;
         this.currentUsername = null;
     }
 
+    // Kontrollerar om någon användare är inloggad
     public boolean isAuthenticated() {
         return this.currentUserId != null;
     }
@@ -105,28 +114,44 @@ public class FinanceManager {
         return this.currentUsername;
     }
 
-    // ===== Transaktioner (per-användare) =====
+    // ===== Transaktioner (per användare) =====
+
+    /**
+     * Hämtar alla transaktioner för inloggad användare.
+     */
 
     public List<Transaction> getAllTransactions() {
         if (!isAuthenticated()) return new ArrayList<>();
         return txRepository.findAllForUser(this.currentUserId);
     }
 
+    /**
+     * Lägger till en ny transaktion för inloggad användare.
+     */
     public void addTransaction(Transaction tx) {
         if (!isAuthenticated()) throw new IllegalStateException("Ingen användare inloggad");
         txRepository.saveForUser(tx, this.currentUserId);
     }
 
+    /**
+     * Tar bort en transaktion baserat på index.
+     */
     public boolean removeTransaction(int index) {
         if (!isAuthenticated()) return false;
         return txRepository.deleteByIndexForUser(index);
     }
 
+    /**
+     * Returnerar antal transaktioner för inloggad användare.
+     */
     public int getTransactionCount() {
         if (!isAuthenticated()) return 0;
         return txRepository.countForUser(this.currentUserId);
     }
 
+    /**
+     * Skriver ut alla transaktioner till konsolen (främst för debugging).
+     */
     public void printAllTransactions() {
         if (!isAuthenticated()) {
             System.out.println("Ingen användare inloggad.");
@@ -144,7 +169,7 @@ public class FinanceManager {
     }
 
     /**
-     * Synka aktuell lista till DB (ersätter allt för användaren).
+     * Synkroniserar aktuella transaktioner till databasen.
      */
     public void saveToFile() {
         if (!isAuthenticated()) {
@@ -157,11 +182,17 @@ public class FinanceManager {
 
     // ===== Rapporter / beräkningar =====
 
+    /**
+     * Beräknar aktuell balans (inkomster - utgifter).
+     */
     public double getBalance() {
         var all = getAllTransactions();
         return all.stream().mapToDouble(Transaction::getAmount).sum();
     }
 
+    /**
+     * Returnerar total inkomst för ett år.
+     */
     public double getYearlyIncome(int year) {
         var all = getAllTransactions();
         return all.stream()
@@ -170,6 +201,9 @@ public class FinanceManager {
                 .sum();
     }
 
+    /**
+     * Returnerar totala utgifter för ett år.
+     */
     public double getYearlyExpenses(int year) {
         var all = getAllTransactions();
         return all.stream()
@@ -178,6 +212,9 @@ public class FinanceManager {
                 .sum();
     }
 
+    /**
+     * Returnerar inkomst för en specifik månad.
+     */
     public double getMonthlyIncome(int year, int month) {
         var all = getAllTransactions();
         return all.stream()
@@ -186,6 +223,9 @@ public class FinanceManager {
                 .sum();
     }
 
+    /**
+     * Returnerar utgifter för en specifik månad.
+     */
     public double getMonthlyExpenses(int year, int month) {
         var all = getAllTransactions();
         return all.stream()
@@ -194,6 +234,9 @@ public class FinanceManager {
                 .sum();
     }
 
+    /**
+     * Returnerar inkomst för en specifik vecka.
+     */
     public double getWeeklyIncome(int year, int week) {
         var all = getAllTransactions();
         return all.stream()
@@ -202,6 +245,9 @@ public class FinanceManager {
                 .sum();
     }
 
+    /**
+     * Returnerar utgifter för en specifik vecka.
+     */
     public double getWeeklyExpenses(int year, int week) {
         var all = getAllTransactions();
         return all.stream()
@@ -210,6 +256,9 @@ public class FinanceManager {
                 .sum();
     }
 
+    /**
+     * Returnerar inkomst för ett specifikt datum.
+     */
     public double getDailyIncome(LocalDate date) {
         var all = getAllTransactions();
         return all.stream()
@@ -218,6 +267,9 @@ public class FinanceManager {
                 .sum();
     }
 
+    /**
+     * Returnerar utgifter för ett specifikt datum.
+     */
     public double getDailyExpenses(LocalDate date) {
         var all = getAllTransactions();
         return all.stream()
@@ -226,6 +278,7 @@ public class FinanceManager {
                 .sum();
     }
 
+    // Hjälpmetod för att räkna ut veckonummer från datum
     private int weekOfYear(LocalDate date) {
         return date.get(ChronoField.ALIGNED_WEEK_OF_YEAR);
     }

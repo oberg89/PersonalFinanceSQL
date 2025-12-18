@@ -42,7 +42,7 @@ public class User {
         this.username = username;
     }
 
-    // Jag returnerar password-hashen (inte plain)
+    // Jag returnerar password-hashen
     public String getPasswordHash() {
         return passwordHash;
     }

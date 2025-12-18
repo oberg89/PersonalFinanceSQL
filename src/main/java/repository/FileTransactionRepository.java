@@ -17,12 +17,6 @@ import java.util.stream.Collectors;
 
 /**
  * Min fil-baserade implementation av TransactionRepository.
- *
- * Jag vill att appen ska använda en stabil plats på disk (inte src/main/resources)
- * så att användardata överlever bygg/clean och fungerar både i IDE och med Maven.
- *
- * Standardplats: %USERPROFILE%/.personalfinance/transactions.csv (Windows)
- * Kan skickas in som filePath i konstruktorn (för test eller custom).
  */
 public class FileTransactionRepository implements TransactionRepository {
 
@@ -89,9 +83,7 @@ public class FileTransactionRepository implements TransactionRepository {
         return tx;
     }
 
-    /**
-     * Tar bort en transaktion på ett visst index.
-     */
+
     @Override
     public boolean deleteByIndex(int index) {
         if (index >= 0 && index < transactions.size()) {
@@ -129,7 +121,7 @@ public class FileTransactionRepository implements TransactionRepository {
     }
 
     /**
-     * Skriver ner hela listan till fil (används om jag vill tvinga en save).
+     * Skriver ner hela listan till fil.
      */
     @Override
     public void saveAll(List<Transaction> all) {

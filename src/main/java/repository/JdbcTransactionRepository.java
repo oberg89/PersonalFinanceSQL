@@ -10,19 +10,15 @@ import java.util.Collections;
 import java.util.List;
 
 /**
- * Jag är en JDBC-baserad implementation av TransactionRepository.
- *
- * Filväg: src/main/java/repository/JdbcTransactionRepository.java
- *
- * NOTE:
+ *JDBC-baserad implementation av TransactionRepository.
  * - Denna klass tillhandahåller metoder som kräver userId (findAllForUser, saveForUser, osv).
- * - De generiska metoderna save(...) och saveAll(...) i interfacet är implementerade men
+ * - De generiska metoderna save(...) och saveAll(...) I interfacet är implementerade men
  *   antingen kastar UnsupportedOperationException eller är no-op för att undvika oavsiktlig
  *   databasanrop utan user_id.
  */
 public final class JdbcTransactionRepository implements repository.TransactionRepository {
 
-    // Senaste mapping index -> id (från senaste findAllForUser)
+    // Mapping index -> id
     private final List<Integer> lastFetchedIds = new ArrayList<>();
 
     public JdbcTransactionRepository() {
@@ -40,11 +36,11 @@ public final class JdbcTransactionRepository implements repository.TransactionRe
         return new Transaction(date, amount, description);
     }
 
-    /* ---------- Metoder som arbetar per-user (rekommenderat) ---------- */
+    /* ---------- Metoder som arbetar per-user ---------- */
 
     /**
-     * Jag hämtar alla transaktioner för en specifik userId (ordnade på created_at).
-     * Jag uppdaterar lastFetchedIds så att deleteByIndexForUser kan användas.
+     *  Hämtar alla transaktioner för en specifik userId (ordnade på created_at).
+     *  Uppdaterar lastFetchedIds så att deleteByIndexForUser kan användas.
      */
     public List<Transaction> findAllForUser(int userId) {
         List<Transaction> list = new ArrayList<>();
@@ -71,7 +67,7 @@ public final class JdbcTransactionRepository implements repository.TransactionRe
     }
 
     /**
-     * Jag sparar en transaktion för given userId.
+     * Sparar en transaktion för given userId.
      * Returnerar transaktionen (oförändrad) eller loggar fel.
      */
     public Transaction saveForUser(Transaction tx, int userId) {
@@ -95,7 +91,7 @@ public final class JdbcTransactionRepository implements repository.TransactionRe
     }
 
     /**
-     * Jag raderar transaktion genom index (index enligt senaste findAllForUser()).
+     * Raderar transaktion genom index (index enligt senaste findAllForUser()).
      * Returnerar true om raderingen lyckades.
      */
     public boolean deleteByIndexForUser(int index) {
@@ -116,7 +112,7 @@ public final class JdbcTransactionRepository implements repository.TransactionRe
     }
 
     /**
-     * Jag hittar transaktioner i ett datumintervall för en user.
+     * Hittar transaktioner i ett datumintervall för en user.
      */
     public List<Transaction> findByDateRangeForUser(LocalDate from, LocalDate to, int userId) {
         List<Transaction> list = new ArrayList<>();
@@ -140,7 +136,7 @@ public final class JdbcTransactionRepository implements repository.TransactionRe
     }
 
     /**
-     * Jag rensar och skriver hela listan för en user (ersätter allt).
+     * Rensar och skriver hela listan för en user (ersätter allt).
      * Implementerat med DELETE + batch-insert i en transaktion.
      */
     public void saveAllForUser(List<Transaction> all, int userId) {
@@ -171,7 +167,7 @@ public final class JdbcTransactionRepository implements repository.TransactionRe
     }
 
     /**
-     * Jag räknar antalet transaktioner för en user.
+     * Räknar antalet transaktioner för en user.
      */
     public int countForUser(int userId) {
         String sql = "SELECT COUNT(*) FROM transactions WHERE user_id = ?";
@@ -192,7 +188,7 @@ public final class JdbcTransactionRepository implements repository.TransactionRe
 
     /**
      * Generisk save - i denna DB-kodbas ska du alltid använda saveForUser(tx, userId).
-     * Jag kastar UnsupportedOperationException för att undvika att någon skriver row utan user_id.
+     * Kastar UnsupportedOperationException för att undvika att någon skriver row utan user_id.
      */
     @Override
     public Transaction save(Transaction tx) {
@@ -200,7 +196,7 @@ public final class JdbcTransactionRepository implements repository.TransactionRe
     }
 
     /**
-     * Generisk saveAll - jag implementerar som no-op för backward compatibility.
+     * Generisk saveAll - implementerar som no-op för backward compatibility.
      * Anropa saveAllForUser(all, userId) för riktig persistens.
      */
     @Override
@@ -209,7 +205,7 @@ public final class JdbcTransactionRepository implements repository.TransactionRe
     }
 
     /**
-     * Generisk deleteByIndex - jag vidarekopplar till deleteByIndexForUser (kräver att findAllForUser körts).
+     * Generisk deleteByIndex - vidarekopplar till deleteByIndexForUser (kräver att findAllForUser körts).
      */
     @Override
     public boolean deleteByIndex(int index) {
@@ -218,16 +214,14 @@ public final class JdbcTransactionRepository implements repository.TransactionRe
 
     /**
      * Generisk findAll - utan user context är detta inte meningsfullt för DB-backend.
-     * Jag returnerar tom lista och rekommenderar findAllForUser(userId).
+     * Returnerar tom lista och rekommenderar findAllForUser(userId).
      */
     @Override
     public List<Transaction> findAll() {
         return Collections.emptyList();
     }
 
-    /**
-     * Generisk count (alla users) - använd med försiktighet.
-     */
+    /// Generisk count (alla users)
     @Override
     public int count() {
         String sql = "SELECT COUNT(*) FROM transactions";
@@ -242,8 +236,8 @@ public final class JdbcTransactionRepository implements repository.TransactionRe
     }
 
     /**
-     * Generisk findByDateRange - eftersom DB-metoder normalt kräver userId så returnerar jag tom lista.
-     * Använd findByDateRangeForUser(from,to,userId) istället.
+     * Generisk findByDateRange - eftersom DB-metoder normalt kräver userId så returnerar tom lista.
+     * Använd findByDateRangeForUser(from, to, userId) istället.
      */
     @Override
     public List<Transaction> findByDateRange(LocalDate from, LocalDate to) {

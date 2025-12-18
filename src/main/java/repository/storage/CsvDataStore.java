@@ -12,7 +12,7 @@ import java.util.List;
  */
 public class CsvDataStore<T> implements DataStore<T> {
 
-    private final File file;                   // Själva filen jag skriver till/läser från
+    private final File file;                   // Själva filen skriver till/läser från
     private final LineConverter<T> converter;  // Hanterar konvertering mellan objekt <-> text-rad
 
     /**
@@ -24,7 +24,7 @@ public class CsvDataStore<T> implements DataStore<T> {
         this.file = file;
         this.converter = converter;
 
-        // Se till att filen finns så jag slipper FileNotFoundException
+        // Se till att filen finns, slipper FileNotFoundException
         ensureFile();
     }
 
@@ -78,9 +78,7 @@ public class CsvDataStore<T> implements DataStore<T> {
         return items;
     }
 
-    /**
-     * Skriver en ny lista till fil (ersätter allt befintligt innehåll).
-     */
+
     @Override
     public void writeAll(List<T> items) {
         try (BufferedWriter writer = new BufferedWriter(

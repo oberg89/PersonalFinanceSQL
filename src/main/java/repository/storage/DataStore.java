@@ -4,7 +4,7 @@ import java.util.List;
 
 /**
  * En enkel "dataström" för att läsa/skriva en lista av objekt T.
- * Tanken: jag kan byta ut hur jag lagrar (CSV, JSON, DB, etc.)
+ * Tanken: kan byta ut hur lagrar (CSV, JSON, DB, etc.)
  * utan att resten av koden bryr sig om detaljerna.
  */
 public interface DataStore<T> {

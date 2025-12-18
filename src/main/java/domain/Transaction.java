@@ -7,7 +7,7 @@ import java.time.LocalDate;
  * (datum, belopp och beskrivning). Används av både GUI och logik.
  */
 public class Transaction {
-    // Fälten är final → objektet är "immutabelt" (går inte att ändra efter skapande).
+
     private final LocalDate date;       // Datum för transaktionen
     private final double amount;        // Belopp (positivt = inkomst, negativt = utgift)
     private final String description;   // Kort text om vad transaktionen gäller

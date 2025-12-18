@@ -7,7 +7,7 @@ import java.util.List;
 import java.util.Optional;
 
 /**
- * Mitt gränssnitt för att lagra och hämta transaktioner.
+ * Gränssnitt för att lagra och hämta transaktioner.
  * (Abstraktion – jag bestämmer VAD som ska göras, inte HUR.)
  * Senare kan jag byta implementation (fil, databas, minne) utan att GUI/service behöver ändras.
  */
@@ -43,7 +43,7 @@ public interface TransactionRepository {
 
     /**
      * För framtidsbruk (om jag inför id): hitta en transaktion utifrån nyckel.
-     * Här lämnar jag den valfri – fil-varianten använder inte id just nu.
+     * Här lämnar den valfri – fil-varianten använder inte id just nu.
      */
     default Optional<Transaction> findById(String id) {
         return Optional.empty();
