@@ -229,11 +229,11 @@ public class FinanceAppFX extends Application {
     private void removeSelectedTransaction() {
         Transaction t = transactionTable.getSelectionModel().getSelectedItem();
         if (t == null) return;
-        financeManager.removeTransaction(
-                financeManager.getAllTransactions().indexOf(t)
-        );
+
+        financeManager.removeTransaction(t);
         refreshTable();
     }
+
 
 
     // Hämtar alla transaktioner och uppdaterar tabellen och balansen

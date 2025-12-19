@@ -8,6 +8,7 @@ import java.time.LocalDate;
  */
 public class Transaction {
 
+    private final int id;               // ID från databasen
     private final LocalDate date;       // Datum för transaktionen
     private final double amount;        // Belopp (positivt = inkomst, negativt = utgift)
     private final String description;   // Kort text om vad transaktionen gäller
@@ -18,16 +19,23 @@ public class Transaction {
      * @param amount belopp (positivt = inkomst, negativt = utgift)
      * @param description beskrivning (om null → ersätts med tom sträng)
      */
-    public Transaction(LocalDate date, double amount, String description) {
+    public Transaction(int id, LocalDate date, double amount, String description) {
         if (date == null) throw new IllegalArgumentException("Datum får inte vara null");
         if (description == null) description = "";
 
         // Sätter fält (trim för att slippa onödiga mellanslag)
+        this.id = id;
         this.date = date;
         this.amount = amount;
         this.description = description.trim();
     }
+    public Transaction(LocalDate date, double amount, String description) {
+        this(0, date, amount, description);
+    }
 
+    public int getId() {
+        return id;
+    }
     // Hämtar datum (används bl.a. av JavaFX TableView)
     public LocalDate getDate() {
         return date;

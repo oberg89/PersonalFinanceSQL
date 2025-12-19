@@ -22,10 +22,10 @@ public interface TransactionRepository {
 
     /**
      * Tar bort en transaktion på en viss position/index (fil-implementationen speglar min lista).
-     * @param index position i listan (0-baserat)
+     * //@param index position i listan (0-baserat)
      * @return true om något togs bort, annars false
      */
-    boolean deleteByIndex(int index);
+    boolean deleteByIdForUser(int transactionId, int userId);
 
     /**
      * Hämtar alla transaktioner (i den ordning de finns lagrade).

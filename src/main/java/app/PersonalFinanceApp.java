@@ -99,9 +99,25 @@ public class PersonalFinanceApp {
         }
 
         financeManager.printAllTransactions();
-        int index = getIntInput("Ange index för transaktion att ta bort (eller 'exit' för att avbryta): ");
-        if (index == -1) return; // användaren skrev exit
-        financeManager.removeTransaction(index);
+        int index = getIntInput(
+                "Ange index för transaktion att ta bort (eller 'exit' för att avbryta): "
+        );
+        if (index == -1) return;
+
+// Hämta alla transaktioner
+        var all = financeManager.getAllTransactions();
+
+        if (index < 0 || index >= all.size()) {
+            System.out.println("Ogiltigt index.");
+            return;
+        }
+
+// Hämta rätt Transaction och ta bort via ID
+        Transaction selected = all.get(index);
+        financeManager.removeTransaction(selected);
+
+        System.out.println("Transaktion borttagen.");
+
     }
 
     // Visar nuvarande kontobalans

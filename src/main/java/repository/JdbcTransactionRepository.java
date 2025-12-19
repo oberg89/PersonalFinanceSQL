@@ -29,12 +29,15 @@ public final class JdbcTransactionRepository implements repository.TransactionRe
 
     // Konstruerar en Transaction från ResultSet (hanterar nullable date)
     private Transaction fromResultSet(ResultSet rs) throws SQLException {
+        int id = rs.getInt("id");
         Date d = rs.getDate("date");
         LocalDate date = d != null ? d.toLocalDate() : null;
         double amount = rs.getDouble("amount");
         String description = rs.getString("description");
-        return new Transaction(date, amount, description);
+
+        return new Transaction(id, date, amount, description);
     }
+
 
     /* ---------- Metoder som arbetar per-user ---------- */
 
@@ -94,22 +97,26 @@ public final class JdbcTransactionRepository implements repository.TransactionRe
      * Raderar transaktion genom index (index enligt senaste findAllForUser()).
      * Returnerar true om raderingen lyckades.
      */
-    public boolean deleteByIndexForUser(int index) {
-        if (index < 0 || index >= lastFetchedIds.size()) return false;
-        int id = lastFetchedIds.get(index);
-        String sql = "DELETE FROM transactions WHERE id = ?";
-        try (Connection c = Database.getConnection();
-             PreparedStatement ps = c.prepareStatement(sql)) {
 
-            ps.setInt(1, id);
-            int updated = ps.executeUpdate();
-            return updated > 0;
+    public boolean deleteByIdForUser(int transactionId, int userId) {
+        String sql = """
+        DELETE FROM transactions
+        WHERE id = ? AND user_id = ?
+    """;
+
+        try (Connection conn = Database.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+
+            ps.setInt(1, transactionId);
+            ps.setInt(2, userId);
+
+            return ps.executeUpdate() == 1;
 
         } catch (SQLException e) {
-            System.out.println("Jag kunde inte ta bort transaktionen: " + e.getMessage());
-            return false;
+            throw new RuntimeException("Kunde inte ta bort transaktion", e);
         }
     }
+
 
     /**
      * Hittar transaktioner i ett datumintervall för en user.
@@ -207,9 +214,11 @@ public final class JdbcTransactionRepository implements repository.TransactionRe
     /**
      * Generisk deleteByIndex - vidarekopplar till deleteByIndexForUser (kräver att findAllForUser körts).
      */
-    @Override
+
     public boolean deleteByIndex(int index) {
-        return deleteByIndexForUser(index);
+        throw new UnsupportedOperationException(
+                "deleteByIndex stöds inte för JDBC. Använd deleteByIdForUser(...)"
+        );
     }
 
     /**

@@ -26,7 +26,7 @@ public class FileTransactionRepository implements TransactionRepository {
     // DataStore som hanterar själva fil-läsningen/skrivningen
     private final DataStore<Transaction> dataStore;
 
-    // Standardfil: i användarens hemkatalog under .personalfinance
+    // Standardfil: i användarens hemkatalog under.personalfinance
     private static final Path DEFAULT_FOLDER = Paths.get(System.getProperty("user.home"), ".personalfinance");
     private static final Path DEFAULT_FILE = DEFAULT_FOLDER.resolve("transactions.csv");
 
@@ -85,14 +85,17 @@ public class FileTransactionRepository implements TransactionRepository {
 
 
     @Override
-    public boolean deleteByIndex(int index) {
-        if (index >= 0 && index < transactions.size()) {
-            transactions.remove(index);
-            dataStore.writeAll(transactions); // autosave
-            return true;
+    public boolean deleteByIdForUser(int transactionId, int userId) {
+        for (int i = 0; i < transactions.size(); i++) {
+            if (transactions.get(i).getId() == transactionId) {
+                transactions.remove(i);
+                dataStore.writeAll(transactions);
+                return true;
+            }
         }
         return false;
     }
+
 
     /**
      * Hämtar alla transaktioner.

@@ -136,10 +136,12 @@ public class FinanceManager {
     /**
      * Tar bort en transaktion baserat på index.
      */
-    public boolean removeTransaction(int index) {
+    public boolean removeTransaction(Transaction tx) {
         if (!isAuthenticated()) return false;
-        return txRepository.deleteByIndexForUser(index);
+        return txRepository.deleteByIdForUser(tx.getId(), currentUserId);
     }
+
+
 
     /**
      * Returnerar antal transaktioner för inloggad användare.
