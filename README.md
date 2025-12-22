@@ -80,11 +80,14 @@ Interface som definierar kontraktet för transaktionslagring:
 
 ```java
 public interface TransactionRepository {
-    Transaction save(Transaction tx);
-    boolean deleteByIndex(int index);
-    List<Transaction> findAllForUser(int userId);
-    int countForUser(int userId);
+  Transaction save(Transaction tx);
+  boolean deleteByIdForUser(int transactionId, int userId);
+  List<Transaction> findAll();
+  List<Transaction> findByDateRange(LocalDate from, LocalDate to);
+  int count();
+  void saveAll(List<Transaction> all);
 }
+
 ```
 
 ### JdbcTransactionRepository.java
