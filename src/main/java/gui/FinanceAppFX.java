@@ -11,7 +11,7 @@ import javafx.scene.control.*;
 import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.layout.*;
 import javafx.stage.Stage;
-
+import gui.ThemeManager;
 import java.time.LocalDate;
 
 // JavaFX-applikation som ansvarar för hela GUI:t (inloggning, menyer, vyer)
@@ -23,6 +23,8 @@ public class FinanceAppFX extends Application {
     private TableView<Transaction> transactionTable;
     // Visar aktuell balans för inloggad användare
     private Label balanceLabel;
+    // Thema
+    private Scene scene;
 
     // Startpunkt för JavaFX-applikationen – bygger upp hela gränssnittet
     @Override
@@ -71,6 +73,9 @@ public class FinanceAppFX extends Application {
                 updateBalanceLabel();
 
         });
+        Button btnTheme = new Button("Byt tema");
+        btnTheme.setPrefWidth(180);
+        btnTheme.setOnAction(e -> ThemeManager.toggle(scene));
 
         Button btnExit = new Button("Logga ut och avsluta");
         btnExit.setPrefWidth(180);
@@ -84,10 +89,12 @@ public class FinanceAppFX extends Application {
 
         leftPanel.getChildren().addAll(
                 new Label("=== MENY ==="),
-                btnAdd, btnRemove, btnRefresh, btnReports, btnLogout, btnExit,
+                btnAdd, btnRemove, btnRefresh, btnReports,
+                btnTheme, btnLogout, btnExit,
                 new Separator(),
                 balanceLabel
         );
+
 
         // Tabell som visar transaktioner för inloggad användare
         transactionTable = new TableView<>();
@@ -110,8 +117,13 @@ public class FinanceAppFX extends Application {
         root.setLeft(leftPanel);
         root.setCenter(transactionTable);
 
-        primaryStage.setScene(new Scene(root, 800, 500));
+        scene = new Scene(root, 800, 500);
+        ThemeManager.applyTheme(scene, ThemeManager.Theme.LIGHT);
+        primaryStage.setScene(scene);
         primaryStage.show();
+
+
+
     }
 
     /**
@@ -125,6 +137,10 @@ public class FinanceAppFX extends Application {
             Dialog<ButtonType> dialog = new Dialog<>();
             dialog.setTitle("Logga in");
             dialog.setHeaderText("Logga in eller registrera ny användare");
+
+
+            applyThemeToDialog(dialog);
+
 
             ButtonType loginBtn = new ButtonType("Logga in", ButtonBar.ButtonData.OK_DONE);
             ButtonType registerBtn = new ButtonType("Registrera", ButtonBar.ButtonData.OTHER);
@@ -182,6 +198,11 @@ public class FinanceAppFX extends Application {
     private void showAddTransactionDialog() {
         Dialog<Transaction> dialog = new Dialog<>();
         dialog.setTitle("Lägg till transaktion");
+
+
+        applyThemeToDialog(dialog);
+
+
 
         ButtonType addBtn = new ButtonType("Lägg till", ButtonBar.ButtonData.OK_DONE);
         dialog.getDialogPane().getButtonTypes().addAll(addBtn, ButtonType.CANCEL);
@@ -251,17 +272,128 @@ public class FinanceAppFX extends Application {
         );
     }
 
-    // Visar rapportdialog (inkomster/utgifter per tidsperiod)
+    // === Visa rapporter (alla nivåer i en dialog) ===
     private void showReportsDialog() {
-        showAlert("Rapporter ej implementerat här.", Alert.AlertType.INFORMATION);
+        Dialog<Void> dialog = new Dialog<>();
+        dialog.setTitle("Rapporter");
+        dialog.setHeaderText("Välj rapporttyp och datumintervall");
+
+
+        applyThemeToDialog(dialog);
+
+
+
+        GridPane grid = new GridPane();
+        grid.setHgap(10);
+        grid.setVgap(10);
+        grid.setPadding(new Insets(20));
+
+        // Välj typ av rapport
+        ComboBox<String> typeBox = new ComboBox<>();
+        typeBox.getItems().addAll("År", "Månad", "Vecka", "Dag");
+        typeBox.setValue("År");
+
+        // Fält för tidsenheter
+        TextField yearField = new TextField(String.valueOf(LocalDate.now().getYear()));
+        TextField monthField = new TextField();
+        TextField weekField = new TextField();
+        DatePicker dayPicker = new DatePicker(LocalDate.now());
+
+        // Placera kontroller i grid
+        grid.add(new Label("Rapporttyp:"), 0, 0);
+        grid.add(typeBox, 1, 0);
+        grid.add(new Label("År:"), 0, 1);
+        grid.add(yearField, 1, 1);
+        grid.add(new Label("Månad (1-12):"), 0, 2);
+        grid.add(monthField, 1, 2);
+        grid.add(new Label("Vecka (1-52):"), 0, 3);
+        grid.add(weekField, 1, 3);
+        grid.add(new Label("Dag:"), 0, 4);
+        grid.add(dayPicker, 1, 4);
+
+        dialog.getDialogPane().setContent(grid);
+        dialog.getDialogPane().getButtonTypes().addAll(ButtonType.OK, ButtonType.CANCEL);
+
+        dialog.setResultConverter(button -> {
+            if (button == ButtonType.OK) {
+                try {
+                    String type = typeBox.getValue();
+                    int year = Integer.parseInt(yearField.getText().trim());
+
+                    switch (type) {
+                        case "År" -> {
+                            double inc = financeManager.getYearlyIncome(year);
+                            double exp = financeManager.getYearlyExpenses(year);
+                            showAlert(
+                                    String.format("=== Årsrapport %d ===\nInkomst: %.2f kr\nUtgifter: %.2f kr\nNetto: %.2f kr",
+                                            year, inc, exp, inc - exp),
+                                    Alert.AlertType.INFORMATION
+                            );
+                        }
+                        case "Månad" -> {
+                            int month = Integer.parseInt(monthField.getText().trim());
+                            double inc = financeManager.getMonthlyIncome(year, month);
+                            double exp = financeManager.getMonthlyExpenses(year, month);
+                            showAlert(
+                                    String.format("=== Månadsrapport %d-%02d ===\nInkomst: %.2f kr\nUtgifter: %.2f kr\nNetto: %.2f kr",
+                                            year, month, inc, exp, inc - exp),
+                                    Alert.AlertType.INFORMATION
+                            );
+                        }
+                        case "Vecka" -> {
+                            int week = Integer.parseInt(weekField.getText().trim());
+                            double inc = financeManager.getWeeklyIncome(year, week);
+                            double exp = financeManager.getWeeklyExpenses(year, week);
+                            showAlert(
+                                    String.format("=== Veckorapport %d - vecka %d ===\nInkomst: %.2f kr\nUtgifter: %.2f kr\nNetto: %.2f kr",
+                                            year, week, inc, exp, inc - exp),
+                                    Alert.AlertType.INFORMATION
+                            );
+                        }
+                        case "Dag" -> {
+                            LocalDate date = dayPicker.getValue();
+                            double inc = financeManager.getDailyIncome(date);
+                            double exp = financeManager.getDailyExpenses(date);
+                            showAlert(
+                                    String.format("=== Dagsrapport %s ===\nInkomst: %.2f kr\nUtgifter: %.2f kr\nNetto: %.2f kr",
+                                            date, inc, exp, inc - exp),
+                                    Alert.AlertType.INFORMATION
+                            );
+                        }
+                    }
+                } catch (Exception e) {
+                    showAlert("Felaktig inmatning! Kontrollera att du skrivit rätt år/månad/vecka.", Alert.AlertType.ERROR);
+                }
+            }
+            return null;
+        });
+
+        dialog.showAndWait();
     }
+
+    private void applyThemeToDialog(Dialog<?> dialog) {
+        dialog.getDialogPane().getStylesheets().clear();
+
+        if (ThemeManager.getCurrentTheme() == ThemeManager.Theme.DARK) {
+            dialog.getDialogPane().getStylesheets().add(
+                    ThemeManager.class.getResource("/dark.css").toExternalForm()
+            );
+        } else {
+            dialog.getDialogPane().getStylesheets().add(
+                    ThemeManager.class.getResource("/light.css").toExternalForm()
+            );
+        }
+    }
+
 
     // Visar ett informations-, varnings- eller felmeddelande
     private void showAlert(String msg, Alert.AlertType type) {
         Alert a = new Alert(type);
+        applyThemeToDialog(a);
         a.setContentText(msg);
         a.showAndWait();
     }
+
 
     public static void main(String[] args) {
         launch(args);

@@ -42,7 +42,7 @@ public final class JdbcTransactionRepository implements repository.TransactionRe
     /* ---------- Metoder som arbetar per-user ---------- */
 
     /**
-     *  Hämtar alla transaktioner för en specifik userId (ordnade på created_at).
+     *  Hämtar alla transaktioner för en specifik userId.
      *  Uppdaterar lastFetchedIds så att deleteByIndexForUser kan användas.
      */
     public List<Transaction> findAllForUser(int userId) {
@@ -149,7 +149,9 @@ public final class JdbcTransactionRepository implements repository.TransactionRe
     public void saveAllForUser(List<Transaction> all, int userId) {
         String deleteSql = "DELETE FROM transactions WHERE user_id = ?";
         String insertSql = "INSERT INTO transactions (user_id, type, amount, description, created_at, date) VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP, ?)";
-        try (Connection c = Database.getConnection()) {
+        Connection c = null;
+        try {
+            c = Database.getConnection();
             c.setAutoCommit(false);
             try (PreparedStatement del = c.prepareStatement(deleteSql)) {
                 del.setInt(1, userId);
@@ -169,7 +171,23 @@ public final class JdbcTransactionRepository implements repository.TransactionRe
             }
             c.commit();
         } catch (SQLException e) {
+            if (c != null) {
+                try {
+                    c.rollback();
+                } catch (SQLException ex) {
+                    System.out.println("Rollback misslyckades: " + ex.getMessage());
+                }
+            }
             System.out.println("Jag kunde inte spara alla transaktioner: " + e.getMessage());
+        } finally {
+            if (c != null) {
+                try {
+                    c.setAutoCommit(true);
+                    c.close();
+                } catch (SQLException e) {
+                    System.out.println("Kunde inte stänga connection: " + e.getMessage());
+                }
+            }
         }
     }
 
