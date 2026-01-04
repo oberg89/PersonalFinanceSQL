@@ -52,6 +52,7 @@ public class FinanceAppFX extends Application {
         btnRemove.setPrefWidth(180);
         btnRemove.setOnAction(e -> removeSelectedTransaction());
 
+
         Button btnRefresh = new Button("Uppdatera lista");
         btnRefresh.setPrefWidth(180);
         btnRefresh.setOnAction(e -> refreshTable());
@@ -111,6 +112,12 @@ public class FinanceAppFX extends Application {
 
         transactionTable.getColumns().addAll(dateCol, amountCol, descCol);
         refreshTable();
+
+        btnRemove.disableProperty().bind(
+                transactionTable.getSelectionModel()
+                        .selectedItemProperty()
+                        .isNull()
+        );
 
         // Huvudlayout där meny ligger till vänster och innehåll i mitten
         BorderPane root = new BorderPane();

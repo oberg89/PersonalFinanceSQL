@@ -49,11 +49,19 @@ public final class JdbcTransactionRepository implements repository.TransactionRe
         List<Transaction> list = new ArrayList<>();
         lastFetchedIds.clear();
 
-        String sql = "SELECT id, date, amount, description FROM transactions WHERE user_id = ? ORDER BY created_at ASC";
+        String sql = """
+        SELECT t.id, t.date, t.amount, t.description
+        FROM transactions t
+        JOIN users u ON t.user_id = u.id
+        WHERE u.id = ?
+        ORDER BY t.created_at ASC
+    """;
+
         try (Connection c = Database.getConnection();
              PreparedStatement ps = c.prepareStatement(sql)) {
 
             ps.setInt(1, userId);
+
             try (ResultSet rs = ps.executeQuery()) {
                 while (rs.next()) {
                     int id = rs.getInt("id");
@@ -68,6 +76,7 @@ public final class JdbcTransactionRepository implements repository.TransactionRe
 
         return list;
     }
+
 
     /**
      * Sparar en transaktion för given userId.
@@ -207,6 +216,64 @@ public final class JdbcTransactionRepository implements repository.TransactionRe
             System.out.println("Jag kunde inte räkna transaktioner: " + e.getMessage());
         }
         return 0;
+    }
+    /**
+     * Summerar all inkomst för ett visst år och användare.
+     * Använder SQL + JOIN + SUM.
+     */
+    public double sumYearlyIncomeForUser(int userId, int year) {
+        String sql = """
+        SELECT COALESCE(SUM(t.amount), 0)
+        FROM transactions t
+        JOIN users u ON t.user_id = u.id
+        WHERE u.id = ?
+          AND t.amount > 0
+          AND EXTRACT(YEAR FROM t.date) = ?
+    """;
+
+        try (Connection c = Database.getConnection();
+             PreparedStatement ps = c.prepareStatement(sql)) {
+
+            ps.setInt(1, userId);
+            ps.setInt(2, year);
+
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getDouble(1);
+                }
+            }
+        } catch (SQLException e) {
+            System.out.println("Kunde inte räkna årsinkomst: " + e.getMessage());
+        }
+
+        return 0.0;
+    }
+    public double sumYearlyExpensesForUser(int userId, int year) {
+        String sql = """
+        SELECT COALESCE(SUM(ABS(t.amount)), 0)
+        FROM transactions t
+        JOIN users u ON t.user_id = u.id
+        WHERE u.id = ?
+          AND t.amount < 0
+          AND EXTRACT(YEAR FROM t.date) = ?
+    """;
+
+        try (Connection c = Database.getConnection();
+             PreparedStatement ps = c.prepareStatement(sql)) {
+
+            ps.setInt(1, userId);
+            ps.setInt(2, year);
+
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getDouble(1);
+                }
+            }
+        } catch (SQLException e) {
+            System.out.println("Kunde inte räkna årsutgifter: " + e.getMessage());
+        }
+
+        return 0.0;
     }
 
     /* ---------- Implementering av generiska repository-metoder (från interfacet) ---------- */

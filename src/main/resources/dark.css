@@ -1,8 +1,14 @@
+/* =========================
+   ROOT
+   ========================= */
 .root {
     -fx-font-family: "System";
     -fx-background-color: #2b2b2b;
 }
 
+/* =========================
+   BUTTONS
+   ========================= */
 .button {
     -fx-background-color: #3a3a3a;
     -fx-text-fill: #f0f0f0;
@@ -16,23 +22,27 @@
     -fx-background-color: #4a4a4a;
 }
 
-/* ===== LABELS ===== */
+/* =========================
+   LABELS
+   ========================= */
 .label {
     -fx-text-fill: #f0f0f0;
 }
 
-/* ===== TABLE VIEW ===== */
+/* =========================
+   TABLE VIEW
+   ========================= */
 .table-view {
     -fx-background-color: #2b2b2b;
     -fx-border-color: #555;
 }
 
-/* Själva bakgrunden bakom raderna */
+/* Bakgrund bakom rader */
 .table-view .virtual-flow {
     -fx-background-color: #2b2b2b;
 }
 
-/* Header-raden (Datum / Belopp / Beskrivning) */
+/* Header */
 .table-view .column-header-background {
     -fx-background-color: #1f1f1f;
 }
@@ -48,54 +58,49 @@
 
 /* Celler */
 .table-view .table-cell {
-    -fx-background-color: #2b2b2b;
+    -fx-background-color: transparent;
     -fx-text-fill: #f0f0f0;
     -fx-border-color: transparent;
 }
 
-/* Markerad rad */
-.table-row-cell:selected {
-    -fx-background-color: #3d5afe;
-}
-
-.table-row-cell:selected .text {
-    -fx-fill: white;
-}
-
-/* Zebra-striping (varannan rad) */
+/* =========================
+   ZEBRA STRIPING
+   ========================= */
 .table-row-cell:odd {
-    -fx-background-color: #303030;
+    -fx-background-color: #2e2e2e;
 }
 
 .table-row-cell:even {
-    -fx-background-color: #807777;
+    -fx-background-color: #343434;
 }
 
 /* =========================
-   TABLE SELECTION – DARK
+   HOVER
    ========================= */
-
-/* Själva raden */
-.table-row-cell:filled:selected {
-    -fx-background-color: #444444;
+.table-row-cell:hover {
+    -fx-background-color: #404040;
 }
 
-/* När tabellen har fokus */
-.table-view:focused .table-row-cell:filled:selected {
-    -fx-background-color: #555555;
+/* =========================
+   SELECTION (EN regel!)
+   ========================= */
+.table-view:focused .table-row-cell:selected {
+    -fx-background-color: #4f6bed;
 }
 
-/* Cellernas bakgrund (viktig!) */
-.table-row-cell:filled:selected .table-cell {
-    -fx-background-color: transparent;
+.table-row-cell:selected {
+    -fx-background-color: #4f6bed;
+}
+
+.table-row-cell:selected .table-cell {
     -fx-text-fill: white;
 }
 
-/* Hover */
-.table-row-cell:hover {
-    -fx-background-color: #333333;
-}
-/* === DATE PICKER HEADER (MONTH + YEAR) === */
+/* =========================
+   DATE PICKER
+   ========================= */
+
+/* Header (månad + år) */
 .date-picker .month-year-pane {
     -fx-background-color: #2b2b2b;
 }
@@ -104,28 +109,28 @@
     -fx-text-fill: white;
 }
 
-/* Arrows */
+/* Pilar */
 .date-picker .spinner .button {
     -fx-background-color: #3a3a3a;
     -fx-text-fill: white;
 }
 
-/* Weekday names */
+/* Veckodagar */
 .date-picker .day-name-cell {
-    -fx-text-fill: #444;
+    -fx-text-fill: #cccccc;
 }
 
-/* Calendar cells */
+/* Kalenderdagar */
 .date-picker .day-cell {
     -fx-background-color: #2b2b2b;
     -fx-text-fill: white;
 }
 
 .date-picker .day-cell:hover {
-    -fx-background-color: #444;
+    -fx-background-color: #444444;
 }
 
 .date-picker .day-cell:selected {
-    -fx-background-color: #5a8dee;
+    -fx-background-color: #4f6bed;
     -fx-text-fill: white;
 }

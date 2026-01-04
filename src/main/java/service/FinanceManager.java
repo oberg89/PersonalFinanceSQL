@@ -196,23 +196,15 @@ public class FinanceManager {
      * Returnerar total inkomst för ett år.
      */
     public double getYearlyIncome(int year) {
-        var all = getAllTransactions();
-        return all.stream()
-                .filter(t -> t.getDate() != null && t.getDate().getYear() == year)
-                .mapToDouble(t -> t.getAmount() > 0 ? t.getAmount() : 0.0)
-                .sum();
+        if (!isAuthenticated()) return 0.0;
+        return txRepository.sumYearlyIncomeForUser(currentUserId, year);
     }
 
-    /**
-     * Returnerar totala utgifter för ett år.
-     */
     public double getYearlyExpenses(int year) {
-        var all = getAllTransactions();
-        return all.stream()
-                .filter(t -> t.getDate() != null && t.getDate().getYear() == year)
-                .mapToDouble(t -> t.getAmount() < 0 ? Math.abs(t.getAmount()) : 0.0)
-                .sum();
+        if (!isAuthenticated()) return 0.0;
+        return txRepository.sumYearlyExpensesForUser(currentUserId, year);
     }
+
 
     /**
      * Returnerar inkomst för en specifik månad.
